@@ -68,7 +68,7 @@ public static class TypeExtension
     {
         string? result = type.GetProperty(propertyName)?.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name;
 
-        if (result == null)
+        if (result is null)
             result = propertyName;
 
         return result;
