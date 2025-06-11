@@ -40,6 +40,6 @@
     
     <ItemGroup>
       <PackageReference Include="Soenneker.Extensions.String" Version="3.0.530" />
-      <PackageReference Include="System.Text.Json" Version="9.0.5" />
+      <PackageReference Include="System.Text.Json" Version="9.0.6" />
     </ItemGroup>
 </Project>
