@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Soenneker.Extensions.String;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using Soenneker.Extensions.String;
 
 namespace Soenneker.Extensions.Type;
 
@@ -16,7 +16,7 @@ namespace Soenneker.Extensions.Type;
 /// </summary>
 public static class TypeExtension
 {
-    private static readonly Dictionary<System.Type, Func<string, object?>> Parsers = new()
+    private static readonly Dictionary<System.Type, Func<string, object?>> _parsers = new()
     {
         [typeof(string)] = v => v,
         [typeof(int)] = v => int.TryParse(v, out int i) ? i : null,
@@ -51,10 +51,17 @@ public static class TypeExtension
     [Pure]
     public static List<TFieldType> GetFieldsOfType<TFieldType>(this System.Type type)
     {
-        return type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                   .Where(p => type.IsAssignableFrom(p.FieldType))
-                   .Select(pi => (TFieldType) pi.GetValue(null)!)
-                   .ToList();
+        FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+        var result = new List<TFieldType>(fields.Length);
+        System.Type fieldTypeTarget = typeof(TFieldType);
+        
+        foreach (FieldInfo field in fields)
+        {
+            if (fieldTypeTarget.IsAssignableFrom(field.FieldType))
+                result.Add((TFieldType)field.GetValue(null)!);
+        }
+        
+        return result;
     }
 
     /// <summary>
@@ -67,7 +74,17 @@ public static class TypeExtension
     [Pure]
     public static IEnumerable<System.Type> GetInterfacesAndSelf(this System.Type type)
     {
-        return (type ?? throw new ArgumentNullException()).IsInterface ? new[] { type }.Concat(type.GetInterfaces()) : type.GetInterfaces();
+        if (type == null)
+            throw new ArgumentNullException(nameof(type));
+
+        if (!type.IsInterface)
+            return type.GetInterfaces();
+
+        System.Type[] interfaces = type.GetInterfaces();
+        var result = new System.Type[interfaces.Length + 1];
+        result[0] = type;
+        Array.Copy(interfaces, 0, result, 1, interfaces.Length);
+        return result;
     }
 
     /// <summary>
@@ -76,6 +93,7 @@ public static class TypeExtension
     /// <param name="type">The type to check.</param>
     /// <returns>True if the type is numeric; otherwise, false.</returns>
     [Pure]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNumeric(this System.Type type)
     {
         var typeCode = (int)System.Type.GetTypeCode(type);
@@ -190,7 +208,7 @@ public static class TypeExtension
         }
 
         // Dictionary lookup
-        if (Parsers.TryGetValue(targetType, out Func<string, object?>? parser))
+        if (_parsers.TryGetValue(targetType, out Func<string, object?>? parser))
             return parser(value);
 
         return null;
