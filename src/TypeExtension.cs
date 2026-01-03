@@ -31,7 +31,10 @@ public static class TypeExtension
         [typeof(double)] = v => double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out double d) ? d : null,
         [typeof(decimal)] = v => decimal.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal dec) ? dec : null,
         [typeof(bool)] = v => bool.TryParse(v, out bool bo) ? bo : null,
-        [typeof(DateTime)] = v => DateTime.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt) ? dt : null,
+        [typeof(DateTime)] = v => DateTime.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dt) ? dt : null,
+        [typeof(DateTimeOffset)] = v =>
+            DateTimeOffset.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset dto) ? dto : null,
+
         [typeof(TimeSpan)] = v => TimeSpan.TryParse(v, CultureInfo.InvariantCulture, out TimeSpan ts) ? ts : null,
         [typeof(Guid)] = v => Guid.TryParse(v, out Guid g) ? g : null,
         [typeof(Uri)] = v => Uri.TryCreate(v, UriKind.RelativeOrAbsolute, out Uri? uri) ? uri : null,
@@ -54,13 +57,13 @@ public static class TypeExtension
         FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
         var result = new List<TFieldType>(fields.Length);
         System.Type fieldTypeTarget = typeof(TFieldType);
-        
+
         foreach (FieldInfo field in fields)
         {
             if (fieldTypeTarget.IsAssignableFrom(field.FieldType))
                 result.Add((TFieldType)field.GetValue(null)!);
         }
-        
+
         return result;
     }
 
@@ -111,7 +114,9 @@ public static class TypeExtension
     [Pure]
     public static string GetJsonPropertyName(this System.Type type, string propertyName)
     {
-        string? result = type.GetProperty(propertyName)?.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name;
+        string? result = type.GetProperty(propertyName)
+                             ?.GetCustomAttribute<JsonPropertyNameAttribute>()
+                             ?.Name;
 
         if (result is null)
             result = propertyName;
@@ -145,7 +150,6 @@ public static class TypeExtension
     /// </code>
     /// </example>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="targetType"/> is null.</exception>
-
     [Pure]
     public static object? ConvertPropertyValue(this System.Type targetType, string value)
     {
@@ -173,7 +177,8 @@ public static class TypeExtension
 
             for (var i = 0; i < length; i++)
             {
-                string item = rawItems[i].Trim();
+                string item = rawItems[i]
+                    .Trim();
                 object? converted = elementType.ConvertPropertyValue(item);
                 array.SetValue(converted, i);
             }
@@ -193,7 +198,8 @@ public static class TypeExtension
 
             for (var i = 0; i < length; i++)
             {
-                string item = rawItems[i].Trim();
+                string item = rawItems[i]
+                    .Trim();
                 object? converted = elementType.ConvertPropertyValue(item);
                 list.Add(converted);
             }
