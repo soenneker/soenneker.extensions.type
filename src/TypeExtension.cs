@@ -1,83 +1,88 @@
-﻿using Soenneker.Extensions.String;
-using System;
+﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Soenneker.Enumerables.CommaSeparated;
 
 namespace Soenneker.Extensions.Type;
 
-/// <summary>
-/// Provides extension methods for the System.Type class, enhancing its functionality
-/// with methods related to type introspection and reflection.
-/// </summary>
 public static class TypeExtension
 {
-    private static readonly Dictionary<System.Type, Func<string, object?>> _parsers = new()
-    {
-        [typeof(string)] = v => v,
-        [typeof(int)] = v => int.TryParse(v, out int i) ? i : null,
-        [typeof(long)] = v => long.TryParse(v, out long l) ? l : null,
-        [typeof(short)] = v => short.TryParse(v, out short s) ? s : null,
-        [typeof(ushort)] = v => ushort.TryParse(v, out ushort us) ? us : null,
-        [typeof(uint)] = v => uint.TryParse(v, out uint ui) ? ui : null,
-        [typeof(ulong)] = v => ulong.TryParse(v, out ulong ul) ? ul : null,
-        [typeof(byte)] = v => byte.TryParse(v, out byte b) ? b : null,
-        [typeof(sbyte)] = v => sbyte.TryParse(v, out sbyte sb) ? sb : null,
-        [typeof(float)] = v => float.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out float f) ? f : null,
-        [typeof(double)] = v => double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out double d) ? d : null,
-        [typeof(decimal)] = v => decimal.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal dec) ? dec : null,
-        [typeof(bool)] = v => bool.TryParse(v, out bool bo) ? bo : null,
-        [typeof(DateTime)] = v => DateTime.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dt) ? dt : null,
-        [typeof(DateTimeOffset)] = v =>
-            DateTimeOffset.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset dto) ? dto : null,
+    private static readonly FrozenDictionary<System.Type, Func<ReadOnlySpan<char>, object?>> _parsers =
+        new Dictionary<System.Type, Func<ReadOnlySpan<char>, object?>>
+        {
+            [typeof(string)] = static s => s.ToString(),
 
-        [typeof(TimeSpan)] = v => TimeSpan.TryParse(v, CultureInfo.InvariantCulture, out TimeSpan ts) ? ts : null,
-        [typeof(Guid)] = v => Guid.TryParse(v, out Guid g) ? g : null,
-        [typeof(Uri)] = v => Uri.TryCreate(v, UriKind.RelativeOrAbsolute, out Uri? uri) ? uri : null,
-        [typeof(char)] = v => v.Length == 1 ? v[0] : null,
-        [typeof(DateOnly)] = v => DateOnly.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly dateOnly) ? dateOnly : null,
-        [typeof(TimeOnly)] = v => TimeOnly.TryParse(v, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly timeOnly) ? timeOnly : null,
-    };
+            [typeof(int)] = static s => int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : null,
+            [typeof(long)] = static s => long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out long v) ? v : null,
+            [typeof(short)] = static s => short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out short v) ? v : null,
+            [typeof(ushort)] = static s => ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out ushort v) ? v : null,
+            [typeof(uint)] = static s => uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint v) ? v : null,
+            [typeof(ulong)] = static s => ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong v) ? v : null,
+            [typeof(byte)] = static s => byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out byte v) ? v : null,
+            [typeof(sbyte)] = static s => sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out sbyte v) ? v : null,
 
-    /// <summary>
-    /// Retrieves a list of fields of a specified type <typeparamref name="TFieldType"/> 
-    /// from the target type, including public and static fields, considering the entire hierarchy.
-    /// </summary>
-    /// <typeparam name="TFieldType">The type of fields to search for within the target type.</typeparam>
-    /// <param name="type">The type to search for fields in.</param>
-    /// <returns>A list of fields of the specified type.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="type"/> is null.</exception>
+            [typeof(float)] = static s =>
+                float.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out float v) ? v : null,
+            [typeof(double)] = static s => double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double v)
+                ? v
+                : null,
+            [typeof(decimal)] = static s => decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal v) ? v : null,
+
+            [typeof(bool)] = static s => bool.TryParse(s, out bool v) ? v : null,
+
+            [typeof(DateTime)] = static s => DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime v) ? v : null,
+            [typeof(DateTimeOffset)] = static s =>
+                DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset v) ? v : null,
+
+            [typeof(TimeSpan)] = static s => TimeSpan.TryParse(s, CultureInfo.InvariantCulture, out TimeSpan v) ? v : null,
+            [typeof(Guid)] = static s => Guid.TryParse(s, out Guid v) ? v : null,
+
+            [typeof(Uri)] = static s =>
+            {
+                // unavoidable string allocation
+                var str = s.ToString();
+                return Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out Uri? uri) ? uri : null;
+            },
+
+            [typeof(char)] = static s => s.Length == 1 ? s[0] : null,
+
+            [typeof(DateOnly)] = static s => DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly v) ? v : null,
+            [typeof(TimeOnly)] = static s => TimeOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly v) ? v : null,
+        }.ToFrozenDictionary();
+
+    private static readonly ConcurrentDictionary<(System.Type, string), string> _jsonNameCache = new();
+
+    // Cache: elementType -> (capacity -> IList)
+    private static readonly ConcurrentDictionary<System.Type, Func<int, IList>> _listFactoryCache = new();
+
     [Pure]
     public static List<TFieldType> GetFieldsOfType<TFieldType>(this System.Type type)
     {
         FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
         var result = new List<TFieldType>(fields.Length);
-        System.Type fieldTypeTarget = typeof(TFieldType);
+        System.Type target = typeof(TFieldType);
 
         foreach (FieldInfo field in fields)
         {
-            if (fieldTypeTarget.IsAssignableFrom(field.FieldType))
+            if (target.IsAssignableFrom(field.FieldType))
                 result.Add((TFieldType)field.GetValue(null)!);
         }
 
         return result;
     }
 
-    /// <summary>
-    /// Retrieves an enumerable of <see cref="System.Type"/> objects representing the interfaces 
-    /// implemented by the target type and, if the target type is an interface itself, the target type.
-    /// </summary>
-    /// <param name="type">The type to retrieve interfaces from.</param>
-    /// <returns>An enumerable of <see cref="System.Type"/> objects.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="type"/> is null.</exception>
     [Pure]
     public static IEnumerable<System.Type> GetInterfacesAndSelf(this System.Type type)
     {
-        if (type == null)
+        if (type is null)
             throw new ArgumentNullException(nameof(type));
 
         if (!type.IsInterface)
@@ -90,11 +95,6 @@ public static class TypeExtension
         return result;
     }
 
-    /// <summary>
-    /// Determines whether the target type is a numeric type (e.g., int, float, double).
-    /// </summary>
-    /// <param name="type">The type to check.</param>
-    /// <returns>True if the type is numeric; otherwise, false.</returns>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNumeric(this System.Type type)
@@ -103,120 +103,140 @@ public static class TypeExtension
         return typeCode is > 4 and < 16;
     }
 
-    /// <summary>
-    /// Retrieves the JsonPropertyName attribute value for a specified property of the target type.
-    /// If the property does not have a JsonPropertyName attribute, returns the property name itself.
-    /// </summary>
-    /// <param name="type">The type containing the property.</param>
-    /// <param name="propertyName">The name of the property to look for the JsonPropertyName attribute on.</param>
-    /// <returns>The JsonPropertyName attribute value, or the property name if the attribute is not present.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="type"/> or <paramref name="propertyName"/> is null.</exception>
     [Pure]
     public static string GetJsonPropertyName(this System.Type type, string propertyName)
     {
-        string? result = type.GetProperty(propertyName)
-                             ?.GetCustomAttribute<JsonPropertyNameAttribute>()
-                             ?.Name;
+        if (type is null)
+            throw new ArgumentNullException(nameof(type));
 
-        if (result is null)
-            result = propertyName;
+        if (propertyName is null)
+            throw new ArgumentNullException(nameof(propertyName));
 
-        return result;
+        return _jsonNameCache.GetOrAdd((type, propertyName), static key =>
+        {
+            string? name = key.Item1.GetProperty(key.Item2)
+                              ?.GetCustomAttribute<JsonPropertyNameAttribute>()
+                              ?.Name;
+
+            return name ?? key.Item2;
+        });
     }
 
-    /// <summary>
-    /// Converts a string representation of a value into an object of the specified <paramref name="targetType"/>.
-    /// </summary>
-    /// <param name="targetType">The target type to convert the string value into. Supports primitive types, enums, arrays, lists, and nullable types.</param>
-    /// <param name="value">The string value to be converted.</param>
-    /// <returns>
-    /// An object of the specified type if conversion succeeds; otherwise, <c>null</c>. 
-    /// If <paramref name="targetType"/> is a nullable type and <paramref name="value"/> is null or whitespace, returns <c>null</c>.
-    /// </returns>
-    /// <remarks>
-    /// Supported conversions include:
-    /// <list type="bullet">
-    ///   <item><description>Primitive types (int, float, bool, etc.)</description></item>
-    ///   <item><description>Special types (Guid, Uri, DateTime, DateOnly, TimeOnly, TimeSpan, char)</description></item>
-    ///   <item><description>Enums (case-insensitive)</description></item>
-    ///   <item><description>Arrays and List&lt;T&gt; from comma-separated values</description></item>
-    ///   <item><description>Nullable versions of all supported types</description></item>
-    /// </list>
-    /// </remarks>
-    /// <example>
-    /// Convert a string to an integer:
-    /// <code>
-    /// int result = (int)typeof(int).ConvertPropertyValue("123")!;
-    /// </code>
-    /// </example>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="targetType"/> is null.</exception>
     [Pure]
-    public static object? ConvertPropertyValue(this System.Type targetType, string value)
+    public static object? ConvertPropertyValue(this System.Type targetType, string value) =>
+        ConvertPropertyValueCore(targetType, value.AsSpan());
+
+    [Pure]
+    private static object? ConvertPropertyValueCore(System.Type? targetType, ReadOnlySpan<char> value)
     {
-        if (targetType == null)
+        if (targetType is null)
             return null;
 
+        value = value.Trim();
+
+        // Nullable<T>
         if (Nullable.GetUnderlyingType(targetType) is { } underlying)
         {
-            if (value.IsNullOrWhiteSpace())
+            if (value.IsEmpty)
                 return null;
 
             targetType = underlying;
         }
 
-        // Array support (e.g. int[], string[])
+        // --------------------------------------------------------
+        // Array
+        // --------------------------------------------------------
         if (targetType.IsArray)
         {
             System.Type? elementType = targetType.GetElementType();
-            if (elementType == null)
+            if (elementType is null)
                 return null;
 
-            string[] rawItems = value.Split(',');
-            int length = rawItems.Length;
-            var array = Array.CreateInstance(elementType, length);
+            var csv = new CommaSeparatedEnumerable(value);
 
-            for (var i = 0; i < length; i++)
-            {
-                string item = rawItems[i]
-                    .Trim();
-                object? converted = elementType.ConvertPropertyValue(item);
-                array.SetValue(converted, i);
-            }
+            int count = csv.Count();
+            var array = Array.CreateInstance(elementType, count);
+
+            var i = 0;
+            foreach (ReadOnlySpan<char> token in csv)
+                array.SetValue(ConvertPropertyValueCore(elementType, token), i++);
 
             return array;
         }
 
-        // List<T> support
+        // --------------------------------------------------------
+        // List<T>
+        // --------------------------------------------------------
         if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
         {
             System.Type elementType = targetType.GetGenericArguments()[0];
-            string[] rawItems = value.Split(',');
-            int length = rawItems.Length;
 
-            System.Type listType = typeof(List<>).MakeGenericType(elementType);
-            var list = (IList)Activator.CreateInstance(listType)!;
+            var csv = new CommaSeparatedEnumerable(value);
+            int count = csv.Count();
 
-            for (var i = 0; i < length; i++)
-            {
-                string item = rawItems[i]
-                    .Trim();
-                object? converted = elementType.ConvertPropertyValue(item);
-                list.Add(converted);
-            }
+            Func<int, IList> factory = _listFactoryCache.GetOrAdd(elementType, static et => CreateListFactory(et));
+
+            IList list = factory(count);
+
+            foreach (ReadOnlySpan<char> token in csv)
+                list.Add(ConvertPropertyValueCore(elementType, token));
 
             return list;
         }
 
-        // Enum support
+        // --------------------------------------------------------
+        // Enum
+        // --------------------------------------------------------
         if (targetType.IsEnum)
         {
-            return Enum.TryParse(targetType, value.Trim(), ignoreCase: true, out object? enumValue) ? enumValue : null;
+            var s = value.ToString(); // unavoidable
+            return Enum.TryParse(targetType, s, ignoreCase: true, out object? e) ? e : null;
         }
 
-        // Dictionary lookup
-        if (_parsers.TryGetValue(targetType, out Func<string, object?>? parser))
+        // --------------------------------------------------------
+        // Fast primitives
+        // --------------------------------------------------------
+        if (_parsers.TryGetValue(targetType, out Func<ReadOnlySpan<char>, object?>? parser))
             return parser(value);
 
         return null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static Func<int, IList> CreateListFactory(System.Type elementType)
+    {
+        System.Type listType = typeof(List<>).MakeGenericType(elementType);
+
+        // Prefer List<T>(int capacity)
+        ConstructorInfo? capCtor = listType.GetConstructor([typeof(int)]);
+        if (capCtor is not null)
+            return CompileCapacityCtor(capCtor);
+
+        // Fallback: parameterless
+        ConstructorInfo? ctor = listType.GetConstructor(System.Type.EmptyTypes);
+        if (ctor is null)
+            throw new InvalidOperationException($"Could not find a usable constructor for {listType}.");
+
+        return CompileParameterlessCtor(ctor);
+    }
+
+    private static Func<int, IList> CompileCapacityCtor(ConstructorInfo ctor)
+    {
+        // (int cap) => (IList)new List<T>(cap)
+        ParameterExpression cap = Expression.Parameter(typeof(int), "cap");
+        NewExpression @new = Expression.New(ctor, cap);
+        UnaryExpression cast = Expression.Convert(@new, typeof(IList));
+        return Expression.Lambda<Func<int, IList>>(cast, cap)
+                         .Compile();
+    }
+
+    private static Func<int, IList> CompileParameterlessCtor(ConstructorInfo ctor)
+    {
+        // (_cap) => (IList)new List<T>()
+        ParameterExpression cap = Expression.Parameter(typeof(int), "cap");
+        NewExpression @new = Expression.New(ctor);
+        UnaryExpression cast = Expression.Convert(@new, typeof(IList));
+        return Expression.Lambda<Func<int, IList>>(cast, cap)
+                         .Compile();
     }
 }
