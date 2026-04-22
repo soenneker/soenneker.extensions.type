@@ -38,7 +38,7 @@ jobs:
         run: dotnet build test/Soenneker.Extensions.Type.Tests/Soenneker.Extensions.Type.Tests.csproj --configuration Release --no-restore --verbosity minimal
 
       - name: Test
-        run: dotnet test test/Soenneker.Extensions.Type.Tests/Soenneker.Extensions.Type.Tests.csproj --configuration Release --no-build --no-restore --verbosity minimal
+        run: dotnet test --project test/Soenneker.Extensions.Type.Tests/Soenneker.Extensions.Type.Tests.csproj --configuration Release --no-build --no-restore --verbosity minimal
 
       - name: Pack
         run: dotnet pack src/Soenneker.Extensions.Type/Soenneker.Extensions.Type.csproj --configuration Release --no-build --no-restore --output . --verbosity minimal
