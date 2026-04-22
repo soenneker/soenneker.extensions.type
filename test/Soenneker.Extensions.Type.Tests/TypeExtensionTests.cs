@@ -1,10 +1,9 @@
-using Xunit;
 
 namespace Soenneker.Extensions.Type.Tests;
 
 public class TypeExtensionTests
 {
-    [Fact]
+    [Test]
     public void Default()
     {
 
