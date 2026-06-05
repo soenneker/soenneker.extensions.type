@@ -13,6 +13,9 @@ using Soenneker.Enumerables.CommaSeparated;
 
 namespace Soenneker.Extensions.Type;
 
+/// <summary>
+/// Represents the type extension.
+/// </summary>
 public static class TypeExtension
 {
     private static readonly FrozenDictionary<System.Type, Func<ReadOnlySpan<char>, object?>> _parsers =
@@ -63,6 +66,12 @@ public static class TypeExtension
     // Cache: elementType -> (capacity -> IList)
     private static readonly ConcurrentDictionary<System.Type, Func<int, IList>> _listFactoryCache = new();
 
+    /// <summary>
+    /// Gets fields of type.
+    /// </summary>
+    /// <typeparam name="TFieldType">The TFieldType type.</typeparam>
+    /// <param name="type">The type.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static List<TFieldType> GetFieldsOfType<TFieldType>(this System.Type type)
     {
@@ -79,6 +88,11 @@ public static class TypeExtension
         return result;
     }
 
+    /// <summary>
+    /// Gets interfaces and self.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static IEnumerable<System.Type> GetInterfacesAndSelf(this System.Type type)
     {
@@ -95,6 +109,11 @@ public static class TypeExtension
         return result;
     }
 
+    /// <summary>
+    /// Executes the is numeric operation.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <returns>A value indicating whether the operation succeeded.</returns>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNumeric(this System.Type type)
@@ -103,6 +122,12 @@ public static class TypeExtension
         return typeCode is > 4 and < 16;
     }
 
+    /// <summary>
+    /// Gets json property name.
+    /// </summary>
+    /// <param name="type">The type.</param>
+    /// <param name="propertyName">The property name.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static string GetJsonPropertyName(this System.Type type, string propertyName)
     {
@@ -122,6 +147,12 @@ public static class TypeExtension
         });
     }
 
+    /// <summary>
+    /// Converts property value.
+    /// </summary>
+    /// <param name="targetType">The target type.</param>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static object? ConvertPropertyValue(this System.Type targetType, string value) =>
         ConvertPropertyValueCore(targetType, value.AsSpan());
