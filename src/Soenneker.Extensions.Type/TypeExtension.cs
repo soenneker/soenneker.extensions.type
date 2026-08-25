@@ -18,6 +18,7 @@ namespace Soenneker.Extensions.Type;
 /// </summary>
 public static class TypeExtension
 {
+    private const int _jsonNameCacheCapacity = 1024;
     private static readonly FrozenDictionary<System.Type, Func<ReadOnlySpan<char>, object?>> _parsers =
         new Dictionary<System.Type, Func<ReadOnlySpan<char>, object?>>
         {
@@ -137,14 +138,18 @@ public static class TypeExtension
         if (propertyName is null)
             throw new ArgumentNullException(nameof(propertyName));
 
-        return _jsonNameCache.GetOrAdd((type, propertyName), static key =>
-        {
-            string? name = key.Item1.GetProperty(key.Item2)
-                              ?.GetCustomAttribute<JsonPropertyNameAttribute>()
-                              ?.Name;
+        var key = (type, propertyName);
+        if (_jsonNameCache.TryGetValue(key, out string? cached))
+            return cached;
 
-            return name ?? key.Item2;
-        });
+        PropertyInfo? property = type.GetProperty(propertyName);
+        string name = property?.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? propertyName;
+
+        // Only cache real properties. Arbitrary miss strings must not permanently grow the cache.
+        if (property is not null && _jsonNameCache.Count < _jsonNameCacheCapacity)
+            _jsonNameCache.TryAdd(key, name);
+
+        return name;
     }
 
     /// <summary>
