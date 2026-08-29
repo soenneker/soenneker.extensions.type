@@ -68,11 +68,11 @@ public static class TypeExtension
     private static readonly ConcurrentDictionary<System.Type, Func<int, IList>> _listFactoryCache = new();
 
     /// <summary>
-    /// Gets fields of type.
+    /// Reads public static fields assignable to the requested type and returns their values.
     /// </summary>
-    /// <typeparam name="TFieldType">The TFieldType type.</typeparam>
-    /// <param name="type">The type.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="TFieldType">The required static-field value type.</typeparam>
+    /// <param name="type">The reflected type to inspect.</param>
+    /// <returns>Values of matching public static fields.</returns>
     [Pure]
     public static List<TFieldType> GetFieldsOfType<TFieldType>(this System.Type type)
     {
@@ -90,10 +90,10 @@ public static class TypeExtension
     }
 
     /// <summary>
-    /// Gets interfaces and self.
+    /// Returns implemented interfaces for a class, or the interface itself followed by its inherited interfaces.
     /// </summary>
-    /// <param name="type">The type.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="type">The reflected type to inspect.</param>
+    /// <returns>The relevant interfaces in reflection order.</returns>
     [Pure]
     public static IEnumerable<System.Type> GetInterfacesAndSelf(this System.Type type)
     {
@@ -111,10 +111,10 @@ public static class TypeExtension
     }
 
     /// <summary>
-    /// Executes the is numeric operation.
+    /// Determines whether a type has a built-in numeric <see cref="TypeCode"/>.
     /// </summary>
-    /// <param name="type">The type.</param>
-    /// <returns>A value indicating whether the operation succeeded.</returns>
+    /// <param name="type">The reflected type to inspect.</param>
+    /// <returns>True for a built-in numeric type.</returns>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNumeric(this System.Type type)
@@ -124,11 +124,11 @@ public static class TypeExtension
     }
 
     /// <summary>
-    /// Gets json property name.
+    /// Returns a property's <see cref="System.Text.Json.Serialization.JsonPropertyNameAttribute"/> name, falling back to the CLR property name.
     /// </summary>
-    /// <param name="type">The type.</param>
-    /// <param name="propertyName">The property name.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="type">The reflected type to inspect.</param>
+    /// <param name="propertyName">The CLR property name.</param>
+    /// <returns>The JSON property name.</returns>
     [Pure]
     public static string GetJsonPropertyName(this System.Type type, string propertyName)
     {
@@ -153,11 +153,11 @@ public static class TypeExtension
     }
 
     /// <summary>
-    /// Converts property value.
+    /// Converts text to a value compatible with a target property type, including nullable and enum types.
     /// </summary>
-    /// <param name="targetType">The target type.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="targetType">The type the returned value must satisfy.</param>
+    /// <param name="value">The textual property value to convert.</param>
+    /// <returns>The converted value; nullable targets may produce null.</returns>
     [Pure]
     public static object? ConvertPropertyValue(this System.Type targetType, string value) =>
         ConvertPropertyValueCore(targetType, value.AsSpan());
