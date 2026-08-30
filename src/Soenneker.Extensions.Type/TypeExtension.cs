@@ -195,7 +195,13 @@ public static class TypeExtension
 
             var i = 0;
             foreach (ReadOnlySpan<char> token in csv)
-                array.SetValue(ConvertPropertyValueCore(elementType, token), i++);
+            {
+                object? converted = ConvertPropertyValueCore(elementType, token);
+                if (converted is null && !IsAllowedNull(elementType, token))
+                    return null;
+
+                array.SetValue(converted, i++);
+            }
 
             return array;
         }
@@ -215,7 +221,13 @@ public static class TypeExtension
             IList list = factory(count);
 
             foreach (ReadOnlySpan<char> token in csv)
-                list.Add(ConvertPropertyValueCore(elementType, token));
+            {
+                object? converted = ConvertPropertyValueCore(elementType, token);
+                if (converted is null && !IsAllowedNull(elementType, token))
+                    return null;
+
+                list.Add(converted);
+            }
 
             return list;
         }
@@ -236,6 +248,12 @@ public static class TypeExtension
             return parser(value);
 
         return null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsAllowedNull(System.Type type, ReadOnlySpan<char> value)
+    {
+        return Nullable.GetUnderlyingType(type) is not null && value.Trim().IsEmpty;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
