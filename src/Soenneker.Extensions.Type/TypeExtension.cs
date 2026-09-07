@@ -237,8 +237,7 @@ public static class TypeExtension
         // --------------------------------------------------------
         if (targetType.IsEnum)
         {
-            var s = value.ToString(); // unavoidable
-            return Enum.TryParse(targetType, s, ignoreCase: true, out object? e) ? e : null;
+            return Enum.TryParse(targetType, value, ignoreCase: true, out object? e) ? e : null;
         }
 
         // --------------------------------------------------------
