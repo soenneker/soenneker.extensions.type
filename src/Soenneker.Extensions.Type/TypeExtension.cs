@@ -1,4 +1,5 @@
-﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
@@ -74,7 +75,7 @@ public static class TypeExtension
     /// <param name="type">The reflected type to inspect.</param>
     /// <returns>Values of matching public static fields.</returns>
     [Pure]
-    public static List<TFieldType> GetFieldsOfType<TFieldType>(this System.Type type)
+    public static List<TFieldType> GetFieldsOfType<TFieldType>([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] this System.Type type)
     {
         FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
         var result = new List<TFieldType>(fields.Length);
@@ -95,7 +96,7 @@ public static class TypeExtension
     /// <param name="type">The reflected type to inspect.</param>
     /// <returns>The relevant interfaces in reflection order.</returns>
     [Pure]
-    public static IEnumerable<System.Type> GetInterfacesAndSelf(this System.Type type)
+    public static IEnumerable<System.Type> GetInterfacesAndSelf([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this System.Type type)
     {
         if (type is null)
             throw new ArgumentNullException(nameof(type));
@@ -130,7 +131,7 @@ public static class TypeExtension
     /// <param name="propertyName">The CLR property name.</param>
     /// <returns>The JSON property name.</returns>
     [Pure]
-    public static string GetJsonPropertyName(this System.Type type, string propertyName)
+    public static string GetJsonPropertyName([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] this System.Type type, string propertyName)
     {
         if (type is null)
             throw new ArgumentNullException(nameof(type));
@@ -159,10 +160,12 @@ public static class TypeExtension
     /// <param name="value">The textual property value to convert.</param>
     /// <returns>The converted value; nullable targets may produce null.</returns>
     [Pure]
+    [RequiresDynamicCode("Converting arbitrary collection types can require runtime generic instantiations.")]
     public static object? ConvertPropertyValue(this System.Type targetType, string value) =>
         ConvertPropertyValueCore(targetType, value.AsSpan());
 
     [Pure]
+    [RequiresDynamicCode("Converting arbitrary collection types can require runtime generic instantiations.")]
     private static object? ConvertPropertyValueCore(System.Type? targetType, ReadOnlySpan<char> value)
     {
         if (targetType is null)
@@ -191,7 +194,7 @@ public static class TypeExtension
             var csv = new CommaSeparatedEnumerable(value);
 
             int count = csv.Count();
-            var array = Array.CreateInstance(elementType, count);
+            var array = Array.CreateInstanceFromArrayType(targetType, count);
 
             var i = 0;
             foreach (ReadOnlySpan<char> token in csv)
@@ -256,6 +259,7 @@ public static class TypeExtension
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [RequiresDynamicCode("Converting arbitrary collection types can require runtime generic instantiations.")]
     private static Func<int, IList> CreateListFactory(System.Type elementType)
     {
         System.Type listType = typeof(List<>).MakeGenericType(elementType);
