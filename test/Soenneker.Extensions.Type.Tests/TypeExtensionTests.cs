@@ -4,7 +4,7 @@ namespace Soenneker.Extensions.Type.Tests;
 public class TypeExtensionTests
 {
     [Test]
-    public async System.Threading.Tasks.Task ConvertPropertyValue_Array_PreservesElementTypeAndValues()
+    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_Array_PreservesElementTypeAndValues()
     {
         var result = (int[])typeof(int[]).ConvertPropertyValue("1,2,3")!;
 
@@ -14,7 +14,7 @@ public class TypeExtensionTests
     }
 
     [Test]
-    public async System.Threading.Tasks.Task ConvertPropertyValue_InvalidArrayElement_ReturnsNull()
+    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_InvalidArrayElement_ReturnsNull()
     {
         object? result = typeof(int[]).ConvertPropertyValue("1,invalid,3");
 
