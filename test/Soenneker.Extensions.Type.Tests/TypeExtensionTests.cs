@@ -1,10 +1,11 @@
+using System.Threading;
 
 namespace Soenneker.Extensions.Type.Tests;
 
 public class TypeExtensionTests
 {
     [Test]
-    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_Array_PreservesElementTypeAndValues()
+    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_Array_PreservesElementTypeAndValues(CancellationToken cancellationToken)
     {
         var result = (int[])typeof(int[]).ConvertPropertyValue("1,2,3")!;
 
@@ -14,7 +15,7 @@ public class TypeExtensionTests
     }
 
     [Test]
-    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_InvalidArrayElement_ReturnsNull()
+    public async System.Threading.Tasks.ValueTask ConvertPropertyValue_InvalidArrayElement_ReturnsNull(CancellationToken cancellationToken)
     {
         object? result = typeof(int[]).ConvertPropertyValue("1,invalid,3");
 
