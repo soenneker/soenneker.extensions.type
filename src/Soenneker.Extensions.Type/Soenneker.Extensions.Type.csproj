@@ -43,6 +43,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Enumerables.CommaSeparated" Version="11.0.33" />
+        <PackageReference Include="Soenneker.Enumerables.CommaSeparated" Version="11.0.34" />
     </ItemGroup>
 </Project>
